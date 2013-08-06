@@ -3,7 +3,7 @@
 // Sous Vide Controller
 // Bill Earl - for Adafruit Industries
 //
-// Based on the Arduino PID and PID AutoTune Libraries 
+// Based on the Arduino PID and PID AutoTune Libraries
 // by Brett Beauregard
 //------------------------------------------------------------------
 
@@ -62,7 +62,7 @@ const int KdAddress = 24;
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 
 // 10 second Time Proportional Output window
-int WindowSize = 10000; 
+int WindowSize = 10000;
 unsigned long windowStartTime;
 
 // ************************************************
@@ -96,17 +96,17 @@ Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
 
 unsigned long lastInput = 0; // last button press
 
-byte degree[8] = // define the degree symbol 
-{ 
- B00110, 
- B01001, 
- B01001, 
- B00110, 
+byte degree[8] = // define the degree symbol
+{
+ B00110,
+ B01001,
+ B01001,
+ B00110,
  B00000,
- B00000, 
- B00000, 
- B00000 
-}; 
+ B00000,
+ B00000,
+ B00000
+};
 
 const int logInterval = 10000; // log every 10 seconds
 long lastLogTime = 0;
@@ -124,7 +124,7 @@ operatingState opState = OFF;
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
 OneWire oneWire(ONE_WIRE_BUS);
 
-// Pass our oneWire reference to Dallas Temperature. 
+// Pass our oneWire reference to Dallas Temperature.
 DallasTemperature sensors(&oneWire);
 
 // arrays to hold device address
@@ -150,11 +150,11 @@ void setup()
    pinMode(ONE_WIRE_PWR, OUTPUT);
    digitalWrite(ONE_WIRE_PWR, HIGH);
 
-   // Initialize LCD DiSplay 
+   // Initialize LCD DiSplay
 
    lcd.begin(16, 2);
    lcd.createChar(1, degree); // create degree symbol from the binary
-   
+
    lcd.setBacklight(VIOLET);
    lcd.print(F("    Adafruit"));
    lcd.setCursor(0, 1);
@@ -163,7 +163,7 @@ void setup()
    // Start up the DS18B20 One Wire Temperature Sensor
 
    sensors.begin();
-   if (!sensors.getAddress(tempSensor, 0)) 
+   if (!sensors.getAddress(tempSensor, 0))
    {
       lcd.setCursor(0, 1);
       lcd.print(F("Sensor Error"));
@@ -180,7 +180,7 @@ void setup()
    myPID.SetSampleTime(1000);
    myPID.SetOutputLimits(0, WindowSize);
 
-  // Run timer2 interrupt every 15 ms 
+  // Run timer2 interrupt every 15 ms
   TCCR2A = 0;
   TCCR2B = 1<<CS22 | 1<<CS21 | 1<<CS20;
 
@@ -191,7 +191,7 @@ void setup()
 // ************************************************
 // Timer Interrupt Handler
 // ************************************************
-SIGNAL(TIMER2_OVF_vect) 
+SIGNAL(TIMER2_OVF_vect)
 {
   if (opState == OFF)
   {
@@ -250,7 +250,7 @@ void Off()
    lcd.setCursor(0, 1);
    lcd.print(F("   Sous Vide!"));
    uint8_t buttons = 0;
-   
+
    while(!(buttons & (BUTTON_RIGHT)))
    {
       buttons = ReadButtons();
@@ -305,7 +305,7 @@ void Tune_Sp()
          Setpoint -= increment;
          delay(200);
       }
-    
+
       if ((millis() - lastInput) > 3000)  // return to RUN after 3 seconds idle
       {
          opState = RUN;
@@ -487,7 +487,7 @@ void TuneD()
 // ************************************************
 void Run()
 {
-   // set up the LCD's number of rows and columns: 
+   // set up the LCD's number of rows and columns:
    lcd.print(F("Sp: "));
    lcd.print(Setpoint);
    lcd.write(1);
@@ -502,8 +502,8 @@ void Run()
       setBacklight();  // set backlight based on state
 
       buttons = ReadButtons();
-      if ((buttons & BUTTON_SHIFT) 
-         && (buttons & BUTTON_RIGHT) 
+      if ((buttons & BUTTON_SHIFT)
+         && (buttons & BUTTON_RIGHT)
          && (abs(Input - Setpoint) < 0.5))  // Should be at steady-state
       {
          StartAutoTune();
@@ -518,14 +518,14 @@ void Run()
         opState = OFF;
         return;
       }
-      
+
       DoControl();
-      
+
       lcd.setCursor(0,1);
       lcd.print(Input);
       lcd.write(1);
       lcd.print(F("C : "));
-      
+
       float pct = map(Output, 0, WindowSize, 0, 1000);
       lcd.setCursor(10,1);
       lcd.print(F("      "));
@@ -543,9 +543,9 @@ void Run()
       {
         lcd.print(" ");
       }
-      
+
       // periodically log to serial port in csv format
-      if (millis() - lastLogTime > logInterval)  
+      if (millis() - lastLogTime > logInterval)
       {
         Serial.print(Input);
         Serial.print(",");
@@ -567,7 +567,7 @@ void DoControl()
     Input = sensors.getTempC(tempSensor);
     sensors.requestTemperatures(); // prime the pump for the next one - but don't wait
   }
-  
+
   if (tuning) // run the auto-tuner
   {
      if (aTune.Runtime()) // returns 'true' when done
@@ -579,16 +579,16 @@ void DoControl()
   {
      myPID.Compute();
   }
-  
+
   // Time Proportional relay state is updated regularly via timer interrupt.
-  onTime = Output; 
+  onTime = Output;
 }
 
 // ************************************************
 // Called by ISR every 15ms to drive the output
 // ************************************************
 void DriveOutput()
-{  
+{
   long now = millis();
   // Set the output
   // "on time" is proportional to the PID output
@@ -615,11 +615,11 @@ void setBacklight()
    {
       lcd.setBacklight(VIOLET); // Tuning Mode
    }
-   else if (abs(Input - Setpoint) > 1.0)  
+   else if (abs(Input - Setpoint) > 1.0)
    {
       lcd.setBacklight(RED);  // High Alarm - off by more than 1 degree
    }
-   else if (abs(Input - Setpoint) > 0.2)  
+   else if (abs(Input - Setpoint) > 0.2)
    {
       lcd.setBacklight(YELLOW);  // Low Alarm - off by more than 0.2 degrees
    }
@@ -660,7 +660,7 @@ void FinishAutoTune()
    // Re-tune the PID and revert to normal control mode
    myPID.SetTunings(Kp,Ki,Kd);
    myPID.SetMode(ATuneModeRemember);
-   
+
    // Persist any changed parameters to EEPROM
    SaveParameters();
 }
@@ -711,7 +711,7 @@ void LoadParameters()
    Kp = EEPROM_readDouble(KpAddress);
    Ki = EEPROM_readDouble(KiAddress);
    Kd = EEPROM_readDouble(KdAddress);
-   
+
    // Use defaults if EEPROM values are invalid
    if (isnan(Setpoint))
    {
@@ -728,7 +728,7 @@ void LoadParameters()
    if (isnan(Kd))
    {
      Kd = 0.1;
-   }  
+   }
 }
 
 
